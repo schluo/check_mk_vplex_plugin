@@ -4,7 +4,7 @@
 __author__    = "Oliver Schlueter"
 __copyright__ = "Copyright 2020, Dell Technologies"
 __license__   = "GPL"
-__version__   = "1.0.0"
+__version__   = "1.0.1"
 __credits__   = ["Martin Rohrbach", "Stefan Schneider"]
 __email__     = "oliver.schlueter@dell.com"
 __status__    = "Production"
@@ -124,11 +124,11 @@ class Vplex():
     def send_request_stats(self):
         # send a request and get the result as dict
         global all_data
-        
-        # prepare request http       
+
+        # prepare request http
         headers = {'Username': self.user, 'Password': self.password}
         all_data = {}
-        
+
         try:
             # Request cluster names
             url = 'https://' + hostaddress + '/vplex/v2/clusters'
@@ -140,38 +140,37 @@ class Vplex():
             for vplex_cluster in j:
                 if vplex_cluster['is_local']:
                     vplex_cluster_name =vplex_cluster['name']
-        
+
         except Exception as err:
             print(timestamp + ": Not able to get cluster names: " + str(err))
             exit(1)
-            
+
         # Request metrics of local cluster
-        try:            
+        try:
             url = 'https://' + hostaddress + '/vplex/v2/clusters/' + vplex_cluster_name + '/system_monitors'
             payload = ""
             r = requests.get(url, json=payload, headers=headers, verify=False)
-            j = json.loads(r.content)          
+            j = json.loads(r.content)
         except Exception as err:
             print(timestamp + ": Not able to get metrics names: " + str(err))
             exit(1)
-            
+
         # Request metric values
-        try:  
+        try:
             for vplex_metrics in j:
                 url = 'https://' + hostaddress + vplex_metrics
                 payload = ""
                 r = requests.get(url, json=payload, headers=headers, verify=False)
                 j = json.loads(r.content)
-                metric_values = j['statistics']       
+                metric_values = j['statistics']
                 # Generate Director Name from metric path
                 director_name = vplex_metrics.split('/')[-1].replace('-','_')
                 director_name = director_name.split('_PERPETUAL')[0]
                 all_data[director_name] = metric_values
-        except Exception as err:  
+        except Exception as err:
             print(timestamp + ": Not able to get metrics values: " + str(err))
-            exit(1)   
+            exit(1)
 
-                
     def send_request_health(self):
         try:
             # send a request and get the result string list
@@ -180,39 +179,39 @@ class Vplex():
             url = 'https://' + hostaddress + '/vplex/health-check'
             payload = {'args': self.cmd}
             r = requests.post(url, json=payload, headers=headers, verify=False)
-            
+
             # prepare return to analyse
             j = json.loads(r.text)
             full_status = j['response']['custom-data']
             full_status = escape_ansi(full_status)
-            status_split = full_status.split('\n')          
-    
+            status_split = full_status.split('\n')
+
             if DEBUG:
                 print(status_split)
-                
+
             return status_split
-        except Exception as err:  
+        except Exception as err:
             print(timestamp + ": Not able to get health status: " + str(err))
-            exit(1)   
-            
+            exit(1)
+
     def process_stats(self):
-        self.send_request_stats() 
+        self.send_request_stats()
 
         # read filter list
         try:
             fobj = open(metric_filter_file,"r")
             stats_filter = fobj.readlines()
-            fobj.close()       
-        except Exception as err:  
+            fobj.close()
+        except Exception as err:
             print(timestamp + ": Not able to load Vplex metrics filter file: " + str(err))
-            exit(1)   
-               
-        # remove \n 
+            exit(1)
+
+        # remove \n
         stats_filter = list(map(lambda s: s.strip(), stats_filter))
 
         # initiate plugin output
         try:
-            checkmk_output = "Perf Data successful loaded at " + timestamp +" | " 
+            checkmk_output = "Perf Data successful loaded at " + timestamp +" | "
             check_mk_metric_conf = ""
             for director in sorted(all_data):
                 #print(data)
@@ -221,61 +220,60 @@ class Vplex():
 
                 for metric in sorted(filtered_metrics):
                     perf_value = all_data[director][metric]
-                    
+
                     # transform to basic units
                     if "KB/s" in metric:
                         perf_value = perf_value * 1024
-                    if "us" in metric:
+                    if "(us)" in metric:
                         perf_value = perf_value / 1000000
-                    
+
                     # generate metric name for plugin output
-                    metric_full_name = director + "_" + metric.replace(' ','_').replace('/','_') 
-                    
+                    metric_full_name = director + "_" + metric.replace(' ','_').replace('/','_')
+
                     # generate metric description for metric config file
                     metric_description = director + ": " + metric.split("(")[0]. \
                                                                   replace("be", "Back-End"). \
                                                                   replace("fe_","Front-End_"). \
-                                                                  replace("avg_lat", "Average Lateny"). \
+                                                                  replace("avg_lat", "Average Latency"). \
                                                                   replace("_"," "). \
                                                                   replace("director.",""). \
-                                                                  replace("director","Director")                   
+                                                                  replace("director","Director")
                     # if command line option "-c" was set
-                    if create_config:   
+                    if create_config:
 
-                        if "KB/s" in metric: metric_unit = "bytes/s" 
+                        if "KB/s" in metric: metric_unit = "bytes/s"
                         if "us" in metric: metric_unit = "s"
                         if "counts/s" in metric: metric_unit = "1/s"
-                        if "counts/s" in metric: metric_unit = "1/s"
                         if "%" in metric: metric_unit = "%"
-                        
+
                         check_mk_metric_conf += 'metric_info["' + metric_full_name +'"] = { ' + "\n" + \
                             '    "title" : _("' + metric_description.title() + '"),' + "\n" + \
                             '    "unit" : "' + metric_unit +'",' + "\n" + \
                             '    "color" : "' + self.random_color() + '",' + "\n" + \
-                        '}' + "\n"                       
-                    
-                    checkmk_output += "'" + metric_full_name +"'=" + str(all_data[director][metric]) + ";;;; "   
-                   
-            # print result to standard output 
+                        '}' + "\n"
+
+                    checkmk_output += "'" + metric_full_name +"'=" + ("{:.4f}".format(perf_value)).rstrip('0').rstrip('.') + ";;;; "
+                    #checkmk_output += "'" + metric_full_name +"'=" + str(perf_value) + ";;;; "
+            # print result to standard output
             print(checkmk_output)
-            
+
             # if command line option "-c" was set
-            if create_config:             
+            if create_config:
                 try:
                     fobj = open(metric_config_file,"w")
                     fobj.write(check_mk_metric_conf)
-                    fobj.close()       
-                except Exception as err:  
+                    fobj.close()
+                except Exception as err:
                     print(timestamp + ": Not able to write metric config file: " + str(err))
-                    exit(1)   
-            
+                    exit(1)
+
         except Exception as err:
             print(timestamp + ": Error while generating result output: " + str(err))
-            exit(1)   
-                       
-  
+            exit(1)
+
+
         sys.exit(0)
-   
+
     def analyse_result(self):
 
         """ ------------- CONFIGURATION -----------
@@ -294,61 +292,59 @@ class Vplex():
           'Output to /var/log/VPlex/cli/health_check_full_scan.log', '', '']
         """
 
-        self.send_request_health()        
-               
-        # count occurences of key words 
+        self.send_request_health()
+
+        # count occurences of key words
         ok_count = str(status_split).lower().count("ok")
         warning_count = str(status_split).lower().count("warning")
         error_count = str(status_split).lower().count("error") + str(status_split).lower().count("degraded")
         none_error = str(status_split).lower().count("none")
-     
+
         if error_count > 0:
-            print(timestamp + " - Final status: Error")            
-            for status in status_split: 
+            print(timestamp + " - Final status: Error")
+            for status in status_split:
                 if status != "" and not "Output to" in  status: print(status)
-            sys.exit(2)   
-        
+            sys.exit(2)
+
         if warning_count > 0:
             print(timestamp + " - Final status: Warning")
-            for status in status_split: 
+            for status in status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(1)
-        
+
         if ok_count > 0:
             print(timestamp + " - Final status: Ok")
-            for status in status_split: 
+            for status in status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(0)
-            
+
         if none_error == 1:
             print(timestamp + " - Final status: No IO aborts")
-            for status in status_split: 
+            for status in status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(0)
-            
+
         sys.exit(3)
-        
-        
-        
+
     # method to generate a random color in hex code
     def random_color(self):
         red = format(random.randrange(10, 254),'x');
         green = format(random.randrange(10, 254),'x');
         blue = format(random.randrange(10, 254),'x');
         return "#"+ red.zfill(2) + green.zfill(2) + blue.zfill(2)
-        
- 
+
+
 def main(argv=None):
     # get and test arguments
     get_argument()
-    
+
     # store timestamp
     global timestamp, metric_filter_file, metric_config_file
     timestamp = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-    
+
     metric_filter_file = os.path.dirname(__file__) + "/vplex_stats_filter"
     metric_config_file = os.path.dirname(__file__).replace("/lib/nagios/plugins", "/share/check_mk/web/plugins/metrics/vplex_perf_metric_" + hostaddress.replace(".","_")+ ".py")
-    
+
     # display arguments if DEBUG enabled
     if DEBUG:
         print("hostname: "+hostaddress)
@@ -358,17 +354,17 @@ def main(argv=None):
         print("args cmd: "+arg_cmd)
     else:
         sys.tracebacklimit = 0
-        
+
     myvplex = Vplex()
 
-    # process stats      
+    # process stats
     if module == 'stats':
         myvplex.process_stats()
-    
+
     # process health status
     else:
         myvplex.analyse_result()
-        
+
 if __name__ == '__main__':
     main()
     sys.exit(3)
