@@ -4,7 +4,7 @@
 __author__    = "Oliver Schlueter"
 __copyright__ = "Copyright 2020, Dell Technologies"
 __license__   = "GPL"
-__version__   = "1.0.1"
+__version__   = "1.0.2"
 __credits__   = ["Martin Rohrbach", "Stefan Schneider"]
 __email__     = "oliver.schlueter@dell.com"
 __status__    = "Production"
@@ -171,6 +171,7 @@ class Vplex():
             print(timestamp + ": Not able to get metrics values: " + str(err))
             exit(1)
 
+
     def send_request_health(self):
         try:
             # send a request and get the result string list
@@ -271,7 +272,6 @@ class Vplex():
             print(timestamp + ": Error while generating result output: " + str(err))
             exit(1)
 
-
         sys.exit(0)
 
     def analyse_result(self):
@@ -295,10 +295,23 @@ class Vplex():
         self.send_request_health()
 
         # count occurences of key words
-        ok_count = str(status_split).lower().count("ok")
-        warning_count = str(status_split).lower().count("warning")
-        error_count = str(status_split).lower().count("error") + str(status_split).lower().count("degraded")
-        none_error = str(status_split).lower().count("none")
+        
+        ok_count = 0
+        warning_count = 0
+        error_count = 0
+        none_error = 0
+        
+        for status in status_split:
+            if str(status).lower().endswith("ok"): ok_count += 1
+            if str(status).lower().endswith("warning"): warning_count += 1
+            if str(status).lower().endswith("error"): error_count += 1
+            if str(status).lower().endswith("degraded"): error_count += 1
+            if str(status).lower().endswith("none"): none_error += 1
+            
+        """ok_count = str(status_split).lower().count("ok\n")
+        warning_count = str(status_split).lower().count("warning\n")
+        error_count = str(status_split).lower().count("error\n") + str(status_split).lower().count("degraded\n")
+        none_error = str(status_split).lower().count("none\n") """
 
         if error_count > 0:
             print(timestamp + " - Final status: Error")
