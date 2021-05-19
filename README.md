@@ -4,7 +4,7 @@ Plugin to integrate Dell EMC PowerStore Systems into Check_MK
 Although the plugin is designed to be used in Check_MK it is implemented as a NAGIOS plugin with Check_MK specific extentions. Thereofore it should be also possible to used it in NAGIOS. 
 
 #Installation
-Copy the plugin to /opt/omd/sites/<site>/local/lib/nagios/plugins 
+Copy the plugin to /opt/omd/sites/{SITE NAME}/local/lib/nagios/plugins 
 
 usage: vplex.py [-h] -H HOSTNAME -u USERNAME -p PASSWORD -m
                 {configuration,back-end,front-end,cache,consistency-group,wan,hardware,cluster_witness,vpn,io-aborts,stats}
