@@ -9,10 +9,12 @@ __credits__   = ["Martin Rohrbach", "Stefan Schneider"]
 __email__     = "oliver.schlueter@dell.com"
 __status__    = "Production"
 
+import time
+
 """"
 ############################################
 #
-#  DELL EMC VPLEX plugin for check__mk
+#  DELL EMC VPLEX plugin for check_mk
 #
 ############################################
 
@@ -24,8 +26,6 @@ import re
 import json
 import requests
 import urllib3
-import csv
-import collections
 import datetime
 import random
 
@@ -179,6 +179,7 @@ class Vplex():
             headers = {'Username': self.user, 'Password': self.password}
             url = 'https://' + hostaddress + '/vplex/health-check'
             payload = {'args': self.cmd}
+
             r = requests.post(url, json=payload, headers=headers, verify=False)
 
             # prepare return to analyse
@@ -350,7 +351,6 @@ class Vplex():
 def main(argv=None):
     # get and test arguments
     get_argument()
-
     # store timestamp
     global timestamp, metric_filter_file, metric_config_file
     timestamp = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
@@ -376,6 +376,10 @@ def main(argv=None):
 
     # process health status
     else:
+        # wait depending on health parameter to avoid conficts
+
+        secondsToWait = list(module_arg).index(arg_cmd.replace('--', ''))
+        time.sleep(secondsToWait * 1.5)
         myvplex.analyse_result()
 
 if __name__ == '__main__':
