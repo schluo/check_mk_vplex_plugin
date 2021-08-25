@@ -47,8 +47,11 @@ module_arg = {
                 'cluster_witness': '--cluster_witness',
                 'vpn': '--vpn',
                 'io-aborts': '--io-aborts',
+                'all': '--all',
                 'stats': '--stats',
     }
+
+all_healthchecks = {'--configuration', '--back-end', '--front-end', '--cache', '--hardware' }
 
 ###########################################
 #    Methods
@@ -87,6 +90,7 @@ def get_argument():
                                      'cluster_witness',
                                      'vpn',
                                      'io-aborts',
+                                     'all',
                                      'stats'],
                             help='Requested MODULE for getting status. \
                                     Possible options are: configuration  | \
@@ -120,6 +124,7 @@ class Vplex():
         self.user = user
         self.password = password
         self.cmd = arg_cmd
+        self.status_split = []
 
     def send_request_stats(self):
         # send a request and get the result as dict
@@ -171,27 +176,25 @@ class Vplex():
             print(timestamp + ": Not able to get metrics values: " + str(err))
             exit(1)
 
-
-    def send_request_health(self):
+    def send_request_health(self,single_healthcheck):
         try:
             # send a request and get the result string list
-            global status_split
+
             headers = {'Username': self.user, 'Password': self.password}
             url = 'https://' + hostaddress + '/vplex/health-check'
-            payload = {'args': self.cmd}
-
+            payload = {'args': single_healthcheck}
             r = requests.post(url, json=payload, headers=headers, verify=False)
 
             # prepare return to analyse
             j = json.loads(r.text)
             full_status = j['response']['custom-data']
             full_status = escape_ansi(full_status)
-            status_split = full_status.split('\n')
+            self.status_split = self.status_split + full_status.split('\n')
 
             if DEBUG:
-                print(status_split)
+                print(self.status_split)
 
-            return status_split
+            return self.status_split
         except Exception as err:
             print(timestamp + ": Not able to get health status: " + str(err))
             exit(1)
@@ -293,8 +296,6 @@ class Vplex():
           'Output to /var/log/VPlex/cli/health_check_full_scan.log', '', '']
         """
 
-        self.send_request_health()
-
         # count occurences of key words
         
         ok_count = 0
@@ -302,7 +303,7 @@ class Vplex():
         error_count = 0
         none_error = 0
         
-        for status in status_split:
+        for status in self.status_split:
             if str(status).lower().endswith("ok"): ok_count += 1
             if str(status).lower().endswith("warning"): warning_count += 1
             if str(status).lower().endswith("error"): error_count += 1
@@ -316,25 +317,25 @@ class Vplex():
 
         if error_count > 0:
             print(timestamp + " - Final status: Error")
-            for status in status_split:
+            for status in self.status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(2)
 
         if warning_count > 0:
             print(timestamp + " - Final status: Warning")
-            for status in status_split:
+            for status in self.status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(1)
 
         if ok_count > 0:
             print(timestamp + " - Final status: Ok")
-            for status in status_split:
+            for status in self.status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(0)
 
         if none_error == 1:
             print(timestamp + " - Final status: No IO aborts")
-            for status in status_split:
+            for status in self.status_split:
                 if status != "" and not "Output to" in  status: print(status)
             sys.exit(0)
 
@@ -376,10 +377,17 @@ def main(argv=None):
 
     # process health status
     else:
-        # wait depending on health parameter to avoid conficts
 
-        secondsToWait = list(module_arg).index(arg_cmd.replace('--', ''))
-        time.sleep(secondsToWait * 1.5)
+        if module == 'all':
+            for single_healthcheck in all_healthchecks:
+                myvplex.send_request_health(single_healthcheck)
+
+        else:
+            # wait depending on health parameter to avoid conficts
+            secondsToWait = list(module_arg).index(module)
+            time.sleep(secondsToWait * 1.5)
+            myvplex.send_request_health(arg_cmd)
+
         myvplex.analyse_result()
 
 if __name__ == '__main__':
