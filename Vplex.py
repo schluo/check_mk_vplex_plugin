@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-__author__    = "Oliver Schlueter"
+__author__ = "Oliver Schlueter"
 __copyright__ = "Copyright 2020, Dell Technologies"
-__license__   = "GPL"
-__version__   = "1.0.2"
-__credits__   = ["Martin Rohrbach", "Stefan Schneider"]
-__email__     = "oliver.schlueter@dell.com"
-__status__    = "Production"
+__license__ = "GPL"
+__version__ = "1.0.4"
+__credits__ = ["Martin Rohrbach", "Stefan Schneider"]
+__email__ = "oliver.schlueter@dell.com"
+__status__ = "Production"
 
 import time
 
@@ -37,29 +37,31 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 DEBUG = False
 
 module_arg = {
-                'configuration': '--configuration',
-                'back-end': '--back-end',
-                'front-end': '--front-end',
-                'cache': '--cache',
-                'consistency-group': '--consistency-group',
-                'wan': '--wan',
-                'hardware': '--hardware',
-                'cluster_witness': '--cluster_witness',
-                'vpn': '--vpn',
-                'io-aborts': '--io-aborts',
-                'all': '--all',
-                'stats': '--stats',
-    }
+    'configuration': '--configuration',
+    'back-end': '--back-end',
+    'front-end': '--front-end',
+    'cache': '--cache',
+    'consistency-group': '--consistency-group',
+    'wan': '--wan',
+    'hardware': '--hardware',
+    'cluster_witness': '--cluster_witness',
+    'vpn': '--vpn',
+    'io-aborts': '--io-aborts',
+    'all': '--all',
+    'stats': '--stats',
+}
 
-all_healthchecks = {'--configuration', '--back-end', '--front-end', '--cache', '--hardware' }
+all_healthchecks = {'--configuration', '--back-end', '--front-end', '--cache', '--hardware'}
+
 
 ###########################################
 #    Methods
 ###########################################
 
 def escape_ansi(line):
-        ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]')
-        return ansi_escape.sub('', str(line))
+    ansi_escape = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]')
+    return ansi_escape.sub('', str(line))
+
 
 def get_argument():
     global hostaddress, user, password, module, arg_cmd, create_config
@@ -98,7 +100,8 @@ def get_argument():
                                      consistency-group | wan hardware |\
                                      cluster_witness | vpn io-aborts | stats',
                             dest='module', required=True)
-        parser.add_argument('-c', '--config', action='store_true', help='build new metric config file',required=False, dest='create_config')
+        parser.add_argument('-c', '--config', action='store_true', help='build new metric config file', required=False,
+                            dest='create_config')
         args = parser.parse_args()
 
     except KeyboardInterrupt:
@@ -125,6 +128,7 @@ class Vplex():
         self.password = password
         self.cmd = arg_cmd
         self.status_split = []
+        self.healthV2 = {}
 
     def send_request_stats(self):
         # send a request and get the result as dict
@@ -144,7 +148,7 @@ class Vplex():
             # filter to local cluster to avoid getting info about remote clusters
             for vplex_cluster in j:
                 if vplex_cluster['is_local']:
-                    vplex_cluster_name =vplex_cluster['name']
+                    vplex_cluster_name = vplex_cluster['name']
 
         except Exception as err:
             print(timestamp + ": Not able to get cluster names: " + str(err))
@@ -169,14 +173,50 @@ class Vplex():
                 j = json.loads(r.content)
                 metric_values = j['statistics']
                 # Generate Director Name from metric path
-                director_name = vplex_metrics.split('/')[-1].replace('-','_')
+                director_name = vplex_metrics.split('/')[-1].replace('-', '_')
                 director_name = director_name.split('_PERPETUAL')[0]
                 all_data[director_name] = metric_values
         except Exception as err:
             print(timestamp + ": Not able to get metrics values: " + str(err))
             exit(1)
 
-    def send_request_health(self,single_healthcheck):
+    def send_request_health_V2(self):
+        # send a request and get the result as dict
+        global all_data
+
+        # prepare request http
+        headers = {'Username': self.user, 'Password': self.password}
+        all_data = {}
+
+        try:
+            # Request cluster names
+            url = 'https://' + hostaddress + '/vplex/v2/clusters'
+            payload = ""
+            r = requests.get(url, json=payload, headers=headers, verify=False)
+            j = json.loads(r.content)
+
+            # filter to local cluster to avoid getting info about remote clusters
+            for vplex_cluster in j:
+                if vplex_cluster['is_local']:
+                    vplex_cluster_name = vplex_cluster['name']
+
+        except Exception as err:
+            print(timestamp + ": Not able to get cluster names: " + str(err))
+            exit(1)
+
+        # Request cluster status of local cluster
+        try:
+            url = 'https://' + hostaddress + '/vplex/v2/clusters/' + vplex_cluster_name
+            payload = ""
+            r = requests.get(url, json=payload, headers=headers, verify=False)
+            j = json.loads(r.content)
+            self.healthV2 = j
+
+        except Exception as err:
+            print(timestamp + ": Not able to get cluster status: " + str(err))
+            exit(1)
+
+    def send_request_health(self, single_healthcheck):
         try:
             # send a request and get the result string list
 
@@ -204,7 +244,7 @@ class Vplex():
 
         # read filter list
         try:
-            fobj = open(metric_filter_file,"r")
+            fobj = open(metric_filter_file, "r")
             stats_filter = fobj.readlines()
             fobj.close()
         except Exception as err:
@@ -216,10 +256,10 @@ class Vplex():
 
         # initiate plugin output
         try:
-            checkmk_output = "Perf Data successful loaded at " + timestamp +" | "
+            checkmk_output = "Perf Data successful loaded at " + timestamp + " | "
             check_mk_metric_conf = ""
             for director in sorted(all_data):
-                #print(data)
+                # print(data)
                 metrics = all_data[director].keys()
                 filtered_metrics = list(filter(lambda x: any(xs in x for xs in stats_filter), metrics))
 
@@ -233,16 +273,16 @@ class Vplex():
                         perf_value = perf_value / 1000000
 
                     # generate metric name for plugin output
-                    metric_full_name = director + "_" + metric.replace(' ','_').replace('/','_')
+                    metric_full_name = director + "_" + metric.replace(' ', '_').replace('/', '_')
 
                     # generate metric description for metric config file
                     metric_description = director + ": " + metric.split("(")[0]. \
-                                                                  replace("be", "Back-End"). \
-                                                                  replace("fe_","Front-End_"). \
-                                                                  replace("avg_lat", "Average Latency"). \
-                                                                  replace("_"," "). \
-                                                                  replace("director.",""). \
-                                                                  replace("director","Director")
+                        replace("be", "Back-End"). \
+                        replace("fe_", "Front-End_"). \
+                        replace("avg_lat", "Average Latency"). \
+                        replace("_", " "). \
+                        replace("director.", ""). \
+                        replace("director", "Director")
                     # if command line option "-c" was set
                     if create_config:
 
@@ -251,21 +291,22 @@ class Vplex():
                         if "counts/s" in metric: metric_unit = "1/s"
                         if "%" in metric: metric_unit = "%"
 
-                        check_mk_metric_conf += 'metric_info["' + metric_full_name +'"] = { ' + "\n" + \
-                            '    "title" : _("' + metric_description.title() + '"),' + "\n" + \
-                            '    "unit" : "' + metric_unit +'",' + "\n" + \
-                            '    "color" : "' + self.random_color() + '",' + "\n" + \
-                        '}' + "\n"
+                        check_mk_metric_conf += 'metric_info["' + metric_full_name + '"] = { ' + "\n" + \
+                                                '    "title" : _("' + metric_description.title() + '"),' + "\n" + \
+                                                '    "unit" : "' + metric_unit + '",' + "\n" + \
+                                                '    "color" : "' + self.random_color() + '",' + "\n" + \
+                                                '}' + "\n"
 
-                    checkmk_output += "'" + metric_full_name +"'=" + ("{:.4f}".format(perf_value)).rstrip('0').rstrip('.') + ";;;; "
-                    #checkmk_output += "'" + metric_full_name +"'=" + str(perf_value) + ";;;; "
+                    checkmk_output += "'" + metric_full_name + "'=" + ("{:.4f}".format(perf_value)).rstrip('0').rstrip(
+                        '.') + ";;;; "
+                    # checkmk_output += "'" + metric_full_name +"'=" + str(perf_value) + ";;;; "
             # print result to standard output
             print(checkmk_output)
 
             # if command line option "-c" was set
             if create_config:
                 try:
-                    fobj = open(metric_config_file,"w")
+                    fobj = open(metric_config_file, "w")
                     fobj.write(check_mk_metric_conf)
                     fobj.close()
                 except Exception as err:
@@ -277,6 +318,28 @@ class Vplex():
             exit(1)
 
         sys.exit(0)
+
+    def analyse_resultV2(self):
+        try:
+            health_status = self.healthV2["health_state"]
+            operational_status = self.healthV2["operational_status"]
+            print("Overall Health-Status: ", health_status)
+            print("Overall Operational Status: ", operational_status)
+            print("Reporting Issues:")
+            for indication in self.healthV2["health_indications"]:
+                print(indication)
+
+            if health_status == "degraded":
+                exit(1)
+            else:
+                if health_status == "error":
+                    exit(2)
+                else:
+                    exit(0)
+
+        except Exception as err:
+            print(timestamp + ": Not able to check cluster: " + str(err))
+            exit(1)
 
     def analyse_result(self):
 
@@ -297,19 +360,18 @@ class Vplex():
         """
 
         # count occurences of key words
-        
         ok_count = 0
         warning_count = 0
         error_count = 0
         none_error = 0
-        
+
         for status in self.status_split:
             if str(status).lower().endswith("ok"): ok_count += 1
             if str(status).lower().endswith("warning"): warning_count += 1
             if str(status).lower().endswith("error"): error_count += 1
             if str(status).lower().endswith("degraded"): error_count += 1
             if str(status).lower().endswith("none"): none_error += 1
-            
+
         """ok_count = str(status_split).lower().count("ok\n")
         warning_count = str(status_split).lower().count("warning\n")
         error_count = str(status_split).lower().count("error\n") + str(status_split).lower().count("degraded\n")
@@ -318,36 +380,35 @@ class Vplex():
         if error_count > 0:
             print(timestamp + " - Final status: Error")
             for status in self.status_split:
-                if status != "" and not "Output to" in  status: print(status)
+                if status != "" and not "Output to" in status: print(status)
             sys.exit(2)
 
         if warning_count > 0:
             print(timestamp + " - Final status: Warning")
             for status in self.status_split:
-                if status != "" and not "Output to" in  status: print(status)
+                if status != "" and not "Output to" in status: print(status)
             sys.exit(1)
 
         if ok_count > 0:
             print(timestamp + " - Final status: Ok")
             for status in self.status_split:
-                if status != "" and not "Output to" in  status: print(status)
+                if status != "" and not "Output to" in status: print(status)
             sys.exit(0)
 
         if none_error == 1:
             print(timestamp + " - Final status: No IO aborts")
             for status in self.status_split:
-                if status != "" and not "Output to" in  status: print(status)
+                if status != "" and not "Output to" in status: print(status)
             sys.exit(0)
 
         sys.exit(3)
 
     # method to generate a random color in hex code
     def random_color(self):
-        red = format(random.randrange(10, 254),'x');
-        green = format(random.randrange(10, 254),'x');
-        blue = format(random.randrange(10, 254),'x');
-        return "#"+ red.zfill(2) + green.zfill(2) + blue.zfill(2)
-
+        red = format(random.randrange(10, 254), 'x');
+        green = format(random.randrange(10, 254), 'x');
+        blue = format(random.randrange(10, 254), 'x');
+        return "#" + red.zfill(2) + green.zfill(2) + blue.zfill(2)
 
 def main(argv=None):
     # get and test arguments
@@ -357,15 +418,17 @@ def main(argv=None):
     timestamp = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
 
     metric_filter_file = os.path.dirname(__file__) + "/vplex_stats_filter"
-    metric_config_file = os.path.dirname(__file__).replace("/lib/nagios/plugins", "/share/check_mk/web/plugins/metrics/vplex_perf_metric_" + hostaddress.replace(".","_")+ ".py")
+    metric_config_file = os.path.dirname(__file__).replace("/lib/nagios/plugins",
+                                                           "/share/check_mk/web/plugins/metrics/vplex_perf_metric_" + hostaddress.replace(
+                                                               ".", "_") + ".py")
 
     # display arguments if DEBUG enabled
     if DEBUG:
-        print("hostname: "+hostaddress)
-        print("user: "+user)
-        print("password: "+password)
-        print("module: "+module)
-        print("args cmd: "+arg_cmd)
+        print("hostname: " + hostaddress)
+        print("user: " + user)
+        print("password: " + password)
+        print("module: " + module)
+        print("args cmd: " + arg_cmd)
     else:
         sys.tracebacklimit = 0
 
@@ -379,16 +442,14 @@ def main(argv=None):
     else:
 
         if module == 'all':
-            for single_healthcheck in all_healthchecks:
-                myvplex.send_request_health(single_healthcheck)
+            # for single_healthcheck in all_healthchecks:
+            #    myvplex.send_request_health(single_healthcheck)
+            myvplex.send_request_health_V2()
+            myvplex.analyse_resultV2()
 
         else:
-            # wait depending on health parameter to avoid conficts
-            secondsToWait = list(module_arg).index(module)
-            time.sleep(secondsToWait * 1.5)
             myvplex.send_request_health(arg_cmd)
-
-        myvplex.analyse_result()
+            myvplex.analyse_result()
 
 if __name__ == '__main__':
     main()
