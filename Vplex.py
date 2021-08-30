@@ -331,7 +331,7 @@ class Vplex():
 
             if health_status in ['degraded', 'minor-failure']:
                 exit(1)
-            if health_status in ['major-failure', 'critical_failure', 'nonrecoverable-error', 'isolated']:
+            if health_status in ['major-failure', 'critical_failure', 'critical-failure', 'nonrecoverable-error', 'isolated']:
                 exit(2)                    
             exit(0)
 
