@@ -332,8 +332,8 @@ class Vplex():
             if health_status == "degraded":
                 exit(1)
             else:
-                if health_status == "error":
-                    exit(2)
+                if health_status == "error" or health_status == "major-failure"
+                    exit(2)                    
                 else:
                     exit(0)
 
