@@ -329,13 +329,11 @@ class Vplex():
             for indication in self.healthV2["health_indications"]:
                 print(indication)
 
-            if health_status == "degraded":
+            if health_status in ['degraded', 'minor-failure']:
                 exit(1)
-            else:
-                if health_status == "error" or health_status == "major-failure":
-                    exit(2)                    
-                else:
-                    exit(0)
+            if health_status in ['major-failure', 'critical_failure', 'nonrecoverable-error', 'isolated']:
+                exit(2)                    
+            exit(0)
 
         except Exception as err:
             print(timestamp + ": Not able to check cluster: " + str(err))
