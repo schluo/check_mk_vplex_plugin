@@ -4,7 +4,7 @@
 __author__ = "Oliver Schlueter"
 __copyright__ = "Copyright 2020, Dell Technologies"
 __license__ = "GPL"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __credits__ = ["Martin Rohrbach", "Stefan Schneider"]
 __email__ = "oliver.schlueter@dell.com"
 __status__ = "Production"
