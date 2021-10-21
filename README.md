@@ -28,7 +28,7 @@ optional arguments:
 
 
 The plugin can be used to get performance values as well as health status  
-To get performance values use the "-m stats" option. The filter file "vplex_stats_filter" will define the list of relevant values (substrings in the filter file will be considered)  
+To get performance values use the `-m stats` option. The filter file _vplex_stats_filter_ will define the list of relevant values (substrings in the filter file will be considered)  
 To get health status information use the -m option followed by the Vplex platform context (`configuration | back-end | front-end | cache | consistency-group | wan hardware | cluster_witness | vpn io-aborts`)
 
 Define a check within Check_MK under "Classical active and passive Monitoring checks".
