@@ -4,8 +4,10 @@ Plugin to integrate Dell EMC PowerStore Systems into Check_MK
 Although the plugin is designed to be used in Check_MK it is implemented as a NAGIOS plugin with Check_MK specific extentions. Thereofore it should be also possible to used it in NAGIOS. 
 
 #Installation
+
 Copy the plugin to /opt/omd/sites/{SITE NAME}/local/lib/nagios/plugins 
 
+```
 usage: vplex.py [-h] -H HOSTNAME -u USERNAME -p PASSWORD -m
                 {configuration,back-end,front-end,cache,consistency-group,wan,hardware,cluster_witness,vpn,io-aborts,stats}
                 [-c]
@@ -22,6 +24,7 @@ optional arguments:
                         Requested MODULE for getting status. Possible options
                         are: configuration | back-end | front-end | cache | consistency-group | wan hardware | cluster_witness | vpn io-aborts | stats
   -c, --config          build new metric config file
+```
 
 
 The plugin can be used to get performance values as well as health status
