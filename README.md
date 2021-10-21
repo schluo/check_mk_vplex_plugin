@@ -27,11 +27,11 @@ optional arguments:
 ```
 
 
-The plugin can be used to get performance values as well as health status
-To get performance values use the "-m stats" option. The filter file "vplex_stats_filter" will define the list of relevant values (substrings in the filter file will be considered)
+The plugin can be used to get performance values as well as health status  
+To get performance values use the "-m stats" option. The filter file "vplex_stats_filter" will define the list of relevant values (substrings in the filter file will be considered)  
 To get health status information use the -m option followed by the Vplex platform context (configuration | back-end | front-end | cache | consistency-group | wan hardware | cluster_witness | vpn io-aborts
 
 Define a check within Check_MK under "Classical active and passive Monitoring checks".
 
-To initially create the metric config file use the -c option (directly from the CLI not from Check_MK/nagios)
+To initially create the metric config file use the -c option (directly from the CLI not from Check_MK/nagios)  
 The plugin will auto-create a metric config file in /opt/omd/sites/<site>/local/share/check_mk/web/plugins/metrics which allows to beautify the diagrams in Check_MK
