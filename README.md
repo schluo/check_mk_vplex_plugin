@@ -3,7 +3,7 @@ Plugin to integrate Dell EMC PowerStore Systems into Check_MK
 
 Although the plugin is designed to be used in Check_MK it is implemented as a NAGIOS plugin with Check_MK specific extentions. Thereofore it should be also possible to used it in NAGIOS. 
 
-#Installation
+## Installation
 
 Copy the plugin to /opt/omd/sites/{SITE NAME}/local/lib/nagios/plugins 
 
