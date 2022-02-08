@@ -1,5 +1,5 @@
-# check_mk_powerstore_plugin
-Plugin to integrate Dell EMC PowerStore Systems into Check_MK
+# check_mk_vplex_plugin
+Plugin to integrate Dell EMC Vplex Systems into Check_MK
 
 Although the plugin is designed to be used in Check_MK it is implemented as a NAGIOS plugin with Check_MK specific extentions. Thereofore it should be also possible to used it in NAGIOS. 
 
