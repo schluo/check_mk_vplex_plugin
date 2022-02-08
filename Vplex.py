@@ -4,7 +4,7 @@
 __author__ = "Oliver Schlueter"
 __copyright__ = "Copyright 2020, Dell Technologies"
 __license__ = "GPL"
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 __credits__ = ["Martin Rohrbach", "Stefan Schneider"]
 __email__ = "oliver.schlueter@dell.com"
 __status__ = "Production"
@@ -273,7 +273,7 @@ class Vplex():
                         perf_value = perf_value / 1000000
 
                     # generate metric name for plugin output
-                    metric_full_name = director + "_" + metric.replace(' ', '_').replace('/', '_')
+                    metric_full_name = director + "_" + metric.replace(' ', '_').replace('/', '_').replace('%','utilization')
 
                     # generate metric description for metric config file
                     metric_description = director + ": " + metric.split("(")[0]. \
@@ -290,6 +290,7 @@ class Vplex():
                         if "us" in metric: metric_unit = "s"
                         if "counts/s" in metric: metric_unit = "1/s"
                         if "%" in metric: metric_unit = "%"
+                        if "utilization" in metric: metric_unit = "%"
 
                         check_mk_metric_conf += 'metric_info["' + metric_full_name + '"] = { ' + "\n" + \
                                                 '    "title" : _("' + metric_description.title() + '"),' + "\n" + \
