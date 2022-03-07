@@ -33,6 +33,7 @@ Define a check within Check_MK under "Classical active and passive Monitoring ch
 To initially create the metric config file use the -c option (directly from the CLI not from Check_MK/nagios)
 The plugin will auto-create a metric config file in /opt/omd/sites/<site>/local/share/check_mk/web/plugins/metrics which allows to beautify the diagrams in Check_MK
   
+---
   
 Copyright (c) 2022 Dell Technologies
 
